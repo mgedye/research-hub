@@ -1,0 +1,4 @@
+{
+  "results_columns": ["sample_id", "weight_mg", "excluded", "exclusion_reason", "notes"],
+  "tissue_suffix": "homogenised-muscle"
+}

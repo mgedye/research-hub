@@ -1,0 +1,4 @@
+{
+  "results_columns": ["well_id", "probe_name", "target_gene", "fluorescent_channel", "n_cells_analyzed", "spots_per_cell_mean", "spots_per_cell_sd", "signal_intensity_mean", "snr_mean", "image_path", "excluded", "exclusion_reason", "notes"],
+  "tissue_suffix": null
+}

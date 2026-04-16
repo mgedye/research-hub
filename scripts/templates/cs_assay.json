@@ -1,0 +1,4 @@
+{
+  "results_columns": ["sample_id", "cs_umol_min_g_protein", "excluded", "exclusion_reason", "notes"],
+  "tissue_suffix": "homogenised-muscle"
+}

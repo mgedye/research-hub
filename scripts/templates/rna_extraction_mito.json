@@ -1,0 +1,4 @@
+{
+  "results_columns": ["sample_id", "elution_vol_ul", "dilution_factor", "dnase_treatment", "excluded", "exclusion_reason", "notes"],
+  "tissue_suffix": "mito-rna"
+}

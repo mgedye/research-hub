@@ -1,0 +1,4 @@
+{
+  "results_columns": ["sample_id", "dilution_factor", "protein_concentration", "unit", "excluded", "exclusion_reason", "notes"],
+  "tissue_suffix": "homogenised-muscle"
+}

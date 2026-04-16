@@ -1,0 +1,4 @@
+{
+  "results_columns": ["culture_id", "plate_format", "n_wells", "seeding_date", "dm1_start_date", "dm2_start_date", "harvest_date", "confluency_at_dm1_pct", "confluency_at_dm2_pct", "excluded", "exclusion_reason", "notes"],
+  "tissue_suffix": null
+}
