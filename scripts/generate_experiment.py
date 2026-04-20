@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
 Generate a new experiment directory and pre-populate it with:
-  - YYYY-MM-DD_<name>.Rmd   printable protocol (from scripts/templates/<procedure>.Rmd)
-  - input/consumables.csv   lot numbers to verify before the experiment
-  - results/results.csv     blank results table ready for data entry
+  - YYYY-MM-DD_<name>.Rmd        printable protocol (from scripts/templates/<procedure>.Rmd)
+  - input/consumables.csv        lot numbers to verify before the experiment
+  - results/results.csv          blank results table ready for data entry
+  - results/sample-storage.csv   blank storage locations for newly created samples
+                                  (only for procedures that generate new sample IDs)
 
 Also inserts a row into the experiments table in research.db.
 
@@ -35,13 +37,13 @@ Projects:
     6  SPRAT
 
 Procedure types and insert scripts:
-    mito_isolation              insert_rna_extractions.py
-    rna_extraction_mito         insert_rna_extractions.py
-    rna_extraction_wm           insert_rna_extractions.py
+    mito_isolation              insert_rna_extractions.py + insert_sample_storage.py
+    rna_extraction_mito         insert_rna_extractions.py + insert_sample_storage.py
+    rna_extraction_wm           insert_rna_extractions.py + insert_sample_storage.py
+    whole_muscle_homogenisation insert_sample_storage.py  (results insert pending)
     bca_assay                   process_bca_plate.R → results.csv  (insert script pending)
     cs_assay                    process_cs_assay.R  → results.csv  (insert script pending)
     rna_qc_tapestation          insert_rna_qc.py
-    whole_muscle_homogenisation (insert script pending)
     satellite_cell_isolation    (insert script pending)
     cell_differentiation        (insert script pending)
     smiFISH_assay               (insert script pending)
@@ -381,6 +383,16 @@ procedure types and insert scripts:
             writer.writerow(row)
     print(f"Results CSV:     {results_csv}")
 
+    # results/sample-storage.csv — only for procedures that generate new sample IDs
+    if sample_ids:
+        storage_csv = exp_dir / "results" / "sample-storage.csv"
+        with open(storage_csv, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["sample_id", "freezer", "drawer", "box", "position", "date", "notes"])
+            for sid in sample_ids:
+                writer.writerow([sid, "", "", "", "", args.date, ""])
+        print(f"Storage CSV:     {storage_csv}")
+
     # Rmd from template
     template_path = Path("scripts") / "templates" / f"{args.procedure}.Rmd"
     if template_path.exists():
@@ -402,11 +414,16 @@ procedure types and insert scripts:
     else:
         print(f"WARNING: no template at {template_path} — Rmd not generated")
 
+    storage_note = (
+        "\n  3b. Fill in results/sample-storage.csv (freezer/drawer/box/position)"
+        "\n  3c. Run insert_sample_storage.py to log storage locations to DB"
+        if sample_ids else ""
+    )
     print(f"""
 Next steps:
   1. Render Rmd → print protocol
   2. Run experiment; fill in results/results.csv
-  3. Verify/update input/consumables.csv with actual lot numbers used
+  3. Verify/update input/consumables.csv with actual lot numbers used{storage_note}
   4. Run the relevant insert script for results
   5. Run insert_consumable_lots.py to log lot numbers to DB
 """)
