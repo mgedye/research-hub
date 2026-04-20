@@ -43,9 +43,4 @@ Analysis repositories that draw metadata from this hub:
 
 **Thesis Angle:** miRNA expression in skeletal muscle mitochondria in response to physiological (exercise) and pathological (type 1 diabetes) conditions.
 
-- MATRX - Human acute exercise model
-- MitoPilot - Experiments piloting mitochondrial isolation and mitochondrial RNA extraction
-- Small Genes with Big Potential - Mouse chronic exercise model
-- Diabetic Small Genes - Mouse type 1 diabetes model
-- COMIT - Bioinformatics pipeline
-- SPRAT - Experiments piloting miRNA localisation to mitochondria using FISH in myocytes
+*Projects hidden until publication of results.*
