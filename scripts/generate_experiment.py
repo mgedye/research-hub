@@ -79,14 +79,13 @@ PROJECT_NAMES = {
 }
 
 TEMPLATES_DIR = Path("scripts") / "templates"
+PROCEDURES_FILE = Path("scripts") / "procedures.json"
+
+_procedures = json.loads(PROCEDURES_FILE.read_text())
 
 
 def load_procedure_meta(procedure):
-    """Load results_columns and tissue_suffix from the procedure's JSON sidecar."""
-    path = TEMPLATES_DIR / f"{procedure}.json"
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())
+    return _procedures.get(procedure)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -286,7 +285,7 @@ procedure types and insert scripts:
 
     meta = load_procedure_meta(args.procedure)
     if meta is None:
-        available = [p.stem for p in sorted(TEMPLATES_DIR.glob("*.json"))]
+        available = sorted(_procedures.keys())
         sys.exit(
             f"ERROR: unknown procedure '{args.procedure}'.\n"
             f"Valid: {', '.join(available)}"

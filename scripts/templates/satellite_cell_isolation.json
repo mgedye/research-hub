@@ -1,4 +1,0 @@
-{
-  "results_columns": ["culture_id", "biopsy_mass_mg", "preplating_duration_hr", "excluded", "exclusion_reason", "notes"],
-  "tissue_suffix": null
-}

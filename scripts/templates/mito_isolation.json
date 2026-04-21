@@ -1,4 +1,0 @@
-{
-  "results_columns": ["sample_id", "excluded", "exclusion_reason", "notes"],
-  "tissue_suffix": "mito-isolate"
-}

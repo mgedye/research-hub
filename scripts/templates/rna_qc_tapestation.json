@@ -1,4 +1,0 @@
-{
-  "results_columns": ["sample_id", "instrument", "well", "rin", "ratio_28s_18s", "concentration", "concentration_unit", "excluded", "exclusion_reason", "notes"],
-  "tissue_suffix": null
-}
