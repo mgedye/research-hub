@@ -36,25 +36,24 @@ Projects:
     5  COMIT
     6  SPRAT
 
-Procedure types and insert scripts:
-    mito_isolation              insert_rna_extractions.py + insert_sample_storage.py
-    rna_extraction_mito         insert_rna_extractions.py + insert_sample_storage.py
-    rna_extraction_wm           insert_rna_extractions.py + insert_sample_storage.py
-    whole_muscle_homogenisation insert_sample_storage.py  (results insert pending)
-    bca_assay                   process_bca_plate.R → results.csv  (insert script pending)
-    cs_assay                    process_cs_assay.R  → results.csv  (insert script pending)
-    rna_qc_tapestation          insert_rna_qc.py
-    satellite_cell_isolation    (insert script pending)
-    cell_differentiation        (insert script pending)
-    smiFISH_assay               (insert script pending)
 """
 
 import argparse
 import csv
+import importlib.util
 import json
-import sqlite3
 import sys
 from pathlib import Path
+
+from lib import (
+    get_db,
+    get_consumables,
+    insert_experiment,
+    build_sample_id,
+    consumables_to_r,
+    results_table_to_r,
+    render_template,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -87,136 +86,15 @@ _procedures = json.loads(PROCEDURES_FILE.read_text())
 def load_procedure_meta(procedure):
     return _procedures.get(procedure)
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
-def get_db():
-    db = sqlite3.connect("research.db")
-    db.row_factory = sqlite3.Row
-    return db
-
-
-def get_consumables(db, project_id, procedure_type, n_samples):
-    """Return list of dicts with consumable data and calculated totals."""
-    rows = db.execute("""
-        SELECT c.name,
-               pc.amount,
-               pc.unit,
-               pc.scale_by,
-               cl.lot_number,
-               cl.expiry
-        FROM procedure_consumables pc
-        JOIN consumables c ON c.consumable_id = pc.consumable_id
-        LEFT JOIN consumable_lots cl
-            ON cl.consumable_id = pc.consumable_id
-            AND cl.lot_id = (
-                SELECT lot_id FROM consumable_lots
-                WHERE consumable_id = pc.consumable_id
-                ORDER BY date_received DESC, lot_id DESC
-                LIMIT 1
-            )
-        WHERE pc.procedure_type = ?
-          AND (pc.project_id IS NULL OR pc.project_id = ?)
-        ORDER BY pc.procedure_consumable_id
-    """, (procedure_type, project_id)).fetchall()
-
-    result = []
-    for row in rows:
-        if row["scale_by"] == "sample":
-            total = row["amount"] * n_samples
-            per_label = f"{row['amount']:.4g} {row['unit']}"
-            total_label = f"{total:.4g} {row['unit']}"
-        else:
-            total = row["amount"]
-            per_label = "— (batch)"
-            total_label = f"{row['amount']:.4g} {row['unit']}"
-
-        lot = row["lot_number"] or "⚠ not recorded"
-        expiry = row["expiry"] or ""
-
-        result.append({
-            "name":        row["name"],
-            "per_sample":  per_label,
-            "total":       total_label,
-            "lot_number":  lot,
-            "expiry":      expiry,
-        })
-    return result
-
-
-def insert_experiment(db, project_id, date, procedure_type):
-    cur = db.execute(
-        "INSERT INTO experiments (project_id, date, procedure_type) VALUES (?, ?, ?)",
-        (project_id, date, procedure_type),
-    )
-    db.commit()
-    return cur.lastrowid
-
-
-
-def build_sample_id(date, subject_id, tissue_suffix, label=None):
-    if not tissue_suffix:
-        return ""
-    parts = [date, subject_id]
-    if label:
-        parts.append(label)
-    parts.append(tissue_suffix)
-    return "_".join(parts)
-
-
-def consumables_to_r(consumables, n_samples):
-    """Return an R code string that creates consumables_df."""
-    def r_vec(items):
-        quoted = [f'"{x}"' for x in items]
-        return "c(" + ", ".join(quoted) + ")"
-
-    names    = [c["name"]       for c in consumables]
-    per_s    = [c["per_sample"] for c in consumables]
-    totals   = [c["total"]      for c in consumables]
-    lots     = [c["lot_number"] for c in consumables]
-    expiries = [c["expiry"]     for c in consumables]
-
-    return (
-        f"consumables_df <- data.frame(\n"
-        f"  Reagent           = {r_vec(names)},\n"
-        f"  `Per Sample`      = {r_vec(per_s)},\n"
-        f"  `Total ({n_samples} samples)` = {r_vec(totals)},\n"
-        f"  `Lot Number`      = {r_vec(lots)},\n"
-        f"  Expiry            = {r_vec(expiries)},\n"
-        f"  check.names = FALSE\n"
-        f")"
-    )
-
-
-def results_table_to_r(headers, sample_ids, n_samples):
-    """Return an R code string that creates blank_results_df."""
-    n = max(len(sample_ids), n_samples)
-    rows = []
-    for i in range(n):
-        sid = sample_ids[i] if i < len(sample_ids) else ""
-        rows.append(sid)
-
-    def r_vec(items):
-        quoted = [f'"{x}"' for x in items]
-        return "c(" + ", ".join(quoted) + ")"
-
-    # Build one column per header; sample_id pre-filled, rest blank
-    cols = []
-    for h in headers:
-        if h == "sample_id":
-            cols.append(f'  `{h}` = {r_vec(rows)}')
-        else:
-            cols.append(f'  `{h}` = rep("", {n})')
-
-    return "results_df <- data.frame(\n" + ",\n".join(cols) + ",\n  check.names = FALSE\n)"
-
-
-def render_template(template_path, replacements):
-    content = template_path.read_text()
-    for key, value in replacements.items():
-        content = content.replace(f"<<<{key}>>>", value)
-    return content
+def load_plugin(procedure):
+    path = Path("scripts") / "procedures" / f"{procedure}.py"
+    if not path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location(f"procedure_{procedure}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 # ---------------------------------------------------------------------------
 # Main
@@ -234,18 +112,6 @@ projects:
   4  MitoPilot
   5  COMIT
   6  SPRAT
-
-procedure types and insert scripts:
-  mito_isolation              insert_rna_extractions.py
-  rna_extraction_mito         insert_rna_extractions.py
-  rna_extraction_wm           insert_rna_extractions.py
-  bca_assay                   process_bca_plate.R -> results.csv  (insert script pending)
-  cs_assay                    process_cs_assay.R  -> results.csv  (insert script pending)
-  rna_qc_tapestation          insert_rna_qc.py
-  whole_muscle_homogenisation (insert script pending)
-  satellite_cell_isolation    (insert script pending)
-  cell_differentiation        (insert script pending)
-  smiFISH_assay               (insert script pending)
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -291,6 +157,26 @@ procedure types and insert scripts:
             f"Valid: {', '.join(available)}"
         )
 
+    # Validate --ids against DB before touching the filesystem
+    db = get_db()
+    if subject_ids:
+        placeholders = ",".join("?" * len(subject_ids))
+        found = (
+            {r[0] for r in db.execute(
+                f"SELECT mouse_id FROM mice WHERE mouse_id IN ({placeholders})",
+                subject_ids).fetchall()} |
+            {r[0] for r in db.execute(
+                f"SELECT recruitment_id FROM participants WHERE recruitment_id IN ({placeholders})",
+                subject_ids).fetchall()} |
+            {r[0] for r in db.execute(
+                f"SELECT culture_id FROM cell_cultures WHERE culture_id IN ({placeholders})",
+                subject_ids).fetchall()}
+        )
+        not_found = set(subject_ids) - found
+        if not_found:
+            db.close()
+            sys.exit(f"ERROR: IDs not found in DB: {', '.join(sorted(not_found))}")
+
     # Create directory
     exp_dir = (
         Path("projects") / project_dir_name / "lab-notebook" / "experiments"
@@ -305,9 +191,6 @@ procedure types and insert scripts:
 
     print(f"Created: {exp_dir}")
 
-    # DB
-    db = get_db()
-
     experiment_id = insert_experiment(db, args.project, args.date, args.procedure)
     print(f"Inserted experiment_id={experiment_id} into experiments table")
 
@@ -317,24 +200,6 @@ procedure types and insert scripts:
             f"WARNING: no consumables found for procedure '{args.procedure}', "
             f"project_id={args.project}"
         )
-
-    # Validate --ids against DB
-    if subject_ids:
-        placeholders = ",".join("?" * len(subject_ids))
-        found = (
-            {r[0] for r in db.execute(
-                f"SELECT mouse_id FROM mice WHERE mouse_id IN ({placeholders})",
-                subject_ids).fetchall()} |
-            {r[0] for r in db.execute(
-                f"SELECT recruitment_id FROM participants WHERE recruitment_id IN ({placeholders})",
-                subject_ids).fetchall()}
-        )
-        not_found = set(subject_ids) - found
-        if not_found:
-            db.close()
-            sys.exit(f"ERROR: IDs not found in DB: {', '.join(sorted(not_found))}")
-
-    db.close()
 
     # input/consumables.csv
     consumables_csv = exp_dir / "input" / "consumables.csv"
@@ -346,7 +211,7 @@ procedure types and insert scripts:
             writer.writerow([c["name"], lot, c["expiry"]])
     print(f"Consumables CSV: {consumables_csv}")
 
-    # Build sample IDs from --ids (only for procedures that auto-generate them)
+    # Build sample IDs from --ids
     tissue_suffix = meta["tissue_suffix"]
     sample_ids = []
     if subject_ids:
@@ -357,17 +222,15 @@ procedure types and insert scripts:
             ]
             print(f"Sample IDs pre-filled from --ids ({len(subject_ids)} subjects)")
         else:
-            print("NOTE: --ids provided but this procedure uses manually-entered IDs")
+            # No tissue suffix — use IDs as-is to pre-fill the first results column
+            sample_ids = subject_ids
+            print(f"IDs pre-filled from --ids ({len(subject_ids)} subjects)")
 
-    # whole_muscle_homogenisation: also write input/muscle_partitioning.csv
-    if args.procedure == "whole_muscle_homogenisation" and subject_ids:
-        partitioning_csv = exp_dir / "input" / "muscle_partitioning.csv"
-        with open(partitioning_csv, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["mouse_id", "weight_mg"])
-            for mid in subject_ids:
-                writer.writerow([mid, ""])
-        print(f"Muscle partitioning CSV: {partitioning_csv}")
+    # Procedure-specific extra files
+    plugin = load_plugin(args.procedure)
+    if plugin:
+        for label, path in plugin.extra_files(args, db, exp_dir, subject_ids):
+            print(f"{label}: {path}")
 
     headers = meta["results_columns"]
     results_csv = exp_dir / "results" / "results.csv"
@@ -383,7 +246,7 @@ procedure types and insert scripts:
     print(f"Results CSV:     {results_csv}")
 
     # results/sample-storage.csv — only for procedures that generate new sample IDs
-    if sample_ids:
+    if sample_ids and tissue_suffix:
         storage_csv = exp_dir / "results" / "sample-storage.csv"
         with open(storage_csv, "w", newline="") as f:
             writer = csv.writer(f)
@@ -398,14 +261,17 @@ procedure types and insert scripts:
         r_consumables = consumables_to_r(consumables, args.samples)
         r_results     = results_table_to_r(headers, sample_ids, args.samples)
         replacements  = {
-            "PROJECT_NAME":   PROJECT_NAMES[args.project],
-            "DATE":           args.date,
-            "EXPERIMENT_ID":  str(experiment_id),
-            "N_SAMPLES":      str(args.samples),
-            "CONSUMABLES_R":  r_consumables,
-            "RESULTS_R":      r_results,
-            "PROCEDURE_TYPE": args.procedure,
+            "PROJECT_NAME":    PROJECT_NAMES[args.project],
+            "DATE":            args.date,
+            "EXPERIMENT_ID":   str(experiment_id),
+            "N_SAMPLES":       str(args.samples),
+            "CONSUMABLES_R":   r_consumables,
+            "CONSUMABLES_CSV": str(exp_dir / "input" / "consumables.csv"),
+            "RESULTS_R":       r_results,
+            "PROCEDURE_TYPE":  args.procedure,
         }
+        if plugin:
+            replacements.update(plugin.extra_replacements(args, db, subject_ids))
         rmd_content = render_template(template_path, replacements)
         rmd_path = exp_dir / f"{args.date}_{args.name}.Rmd"
         rmd_path.write_text(rmd_content)
@@ -413,10 +279,12 @@ procedure types and insert scripts:
     else:
         print(f"WARNING: no template at {template_path} — Rmd not generated")
 
+    db.close()
+
     storage_note = (
         "\n  3b. Fill in results/sample-storage.csv (freezer/drawer/box/position)"
         "\n  3c. Run insert_sample_storage.py to log storage locations to DB"
-        if sample_ids else ""
+        if sample_ids and tissue_suffix else ""
     )
     print(f"""
 Next steps:
