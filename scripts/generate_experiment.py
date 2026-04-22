@@ -42,18 +42,9 @@ import argparse
 import csv
 import importlib.util
 import json
+import sqlite3
 import sys
 from pathlib import Path
-
-from lib import (
-    get_db,
-    get_consumables,
-    insert_experiment,
-    build_sample_id,
-    consumables_to_r,
-    results_table_to_r,
-    render_template,
-)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -77,7 +68,7 @@ PROJECT_NAMES = {
     6: "SPRAT",
 }
 
-TEMPLATES_DIR = Path("scripts") / "templates"
+TEMPLATES_DIR = Path("scripts") / "protocols" / "templates"
 PROCEDURES_FILE = Path("scripts") / "procedures.json"
 
 _procedures = json.loads(PROCEDURES_FILE.read_text())
@@ -95,6 +86,132 @@ def load_plugin(procedure):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def get_db():
+    db = sqlite3.connect("research.db")
+    db.row_factory = sqlite3.Row
+    return db
+
+
+def get_consumables(db, project_id, procedure_type, n_samples):
+    """Return list of dicts with consumable data and calculated totals."""
+    rows = db.execute("""
+        SELECT c.name,
+               pc.amount,
+               pc.unit,
+               pc.scale_by,
+               cl.lot_number,
+               cl.expiry
+        FROM procedure_consumables pc
+        JOIN consumables c ON c.consumable_id = pc.consumable_id
+        LEFT JOIN consumable_lots cl
+            ON cl.consumable_id = pc.consumable_id
+            AND cl.lot_id = (
+                SELECT lot_id FROM consumable_lots
+                WHERE consumable_id = pc.consumable_id
+                ORDER BY date_received DESC, lot_id DESC
+                LIMIT 1
+            )
+        WHERE pc.procedure_type = ?
+          AND (pc.project_id IS NULL OR pc.project_id = ?)
+        ORDER BY pc.procedure_consumable_id
+    """, (procedure_type, project_id)).fetchall()
+
+    result = []
+    for row in rows:
+        if row["scale_by"] == "sample":
+            total = row["amount"] * n_samples
+            per_label = f"{row['amount']:.4g} {row['unit']}"
+            total_label = f"{total:.4g} {row['unit']}"
+        else:
+            total = row["amount"]
+            per_label = "— (batch)"
+            total_label = f"{row['amount']:.4g} {row['unit']}"
+
+        lot = row["lot_number"] or "⚠ not recorded"
+        expiry = row["expiry"] or ""
+
+        result.append({
+            "name":        row["name"],
+            "per_sample":  per_label,
+            "total":       total_label,
+            "lot_number":  lot,
+            "expiry":      expiry,
+        })
+    return result
+
+
+def insert_experiment(db, project_id, date, procedure_type):
+    cur = db.execute(
+        "INSERT INTO experiments (project_id, date, procedure_type) VALUES (?, ?, ?)",
+        (project_id, date, procedure_type),
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+def build_sample_id(date, subject_id, tissue_suffix, label=None):
+    if not tissue_suffix:
+        return ""
+    parts = [date, subject_id]
+    if label:
+        parts.append(label)
+    parts.append(tissue_suffix)
+    return "_".join(parts)
+
+
+def consumables_to_r(consumables, n_samples):
+    """Return an R code string that creates consumables_df."""
+    def r_vec(items):
+        quoted = [f'"{x}"' for x in items]
+        return "c(" + ", ".join(quoted) + ")"
+
+    names    = [c["name"]       for c in consumables]
+    per_s    = [c["per_sample"] for c in consumables]
+    totals   = [c["total"]      for c in consumables]
+    lots     = [c["lot_number"] for c in consumables]
+    expiries = [c["expiry"]     for c in consumables]
+
+    return (
+        f"consumables_df <- data.frame(\n"
+        f"  Reagent           = {r_vec(names)},\n"
+        f"  `Per Sample`      = {r_vec(per_s)},\n"
+        f"  `Total ({n_samples} samples)` = {r_vec(totals)},\n"
+        f"  `Lot Number`      = {r_vec(lots)},\n"
+        f"  Expiry            = {r_vec(expiries)},\n"
+        f"  check.names = FALSE\n"
+        f")"
+    )
+
+
+def results_table_to_r(headers, sample_ids, n_samples):
+    """Return an R code string that creates blank_results_df."""
+    n = max(len(sample_ids), n_samples)
+    rows = [sample_ids[i] if i < len(sample_ids) else "" for i in range(n)]
+
+    def r_vec(items):
+        quoted = [f'"{x}"' for x in items]
+        return "c(" + ", ".join(quoted) + ")"
+
+    cols = []
+    for i, h in enumerate(headers):
+        if i == 0 and rows:
+            cols.append(f'  `{h}` = {r_vec(rows)}')
+        else:
+            cols.append(f'  `{h}` = rep("", {n})')
+
+    return "results_df <- data.frame(\n" + ",\n".join(cols) + ",\n  check.names = FALSE\n)"
+
+
+def render_template(template_path, replacements):
+    content = Path(template_path).read_text()
+    for key, value in replacements.items():
+        content = content.replace(f"<<<{key}>>>", value)
+    return content
 
 # ---------------------------------------------------------------------------
 # Main
@@ -256,7 +373,7 @@ projects:
         print(f"Storage CSV:     {storage_csv}")
 
     # Rmd from template
-    template_path = Path("scripts") / "templates" / f"{args.procedure}.Rmd"
+    template_path = Path("scripts") / "protocols" / "templates" / f"{args.procedure}.Rmd"
     if template_path.exists():
         r_consumables = consumables_to_r(consumables, args.samples)
         r_results     = results_table_to_r(headers, sample_ids, args.samples)
@@ -283,7 +400,7 @@ projects:
 
     storage_note = (
         "\n  3b. Fill in results/sample-storage.csv (freezer/drawer/box/position)"
-        "\n  3c. Run insert_sample_storage.py to log storage locations to DB"
+        "\n  3c. Run scripts/insert/insert_sample_storage.py to log storage locations to DB"
         if sample_ids and tissue_suffix else ""
     )
     print(f"""
@@ -292,7 +409,7 @@ Next steps:
   2. Run experiment; fill in results/results.csv
   3. Verify/update input/consumables.csv with actual lot numbers used{storage_note}
   4. Run the relevant insert script for results
-  5. Run insert_consumable_lots.py to log lot numbers to DB
+  5. Run scripts/insert/insert_consumable_lots.py to log lot numbers to DB
 """)
 
 
