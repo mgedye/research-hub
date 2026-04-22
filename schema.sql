@@ -457,20 +457,22 @@ create index external_samples_run on external_samples(run_id);
 -- SPRAT — cell culture and smiFISH probe validation
 ---------------------------------------------------------------------------
 
--- Master record for each frozen cell stock (one row per passage per donor).
--- culture_id is human-readable: e.g. 'SKM-001-P0', 'SKM-001-P1'.
--- participant_id links to participants(participant_id) when the donor is already
--- in the DB (e.g. MATRX biopsy donor); donor_label is a fallback for new donors.
+-- Organism table for cell culture donors (one row per donor).
+-- Follows the same anchor pattern as mice, participants, specimens.
+-- anchor_id is the universal PK; culture_id is the human-readable donor ID (e.g. 'SKM-001'),
+-- analogous to mouse_id (BB361) or recruitment_id (P001).
+-- passage and stock details are attributes of this record (the vial pulled from the freezer).
 create table cell_cultures (
-    culture_id         text    primary key,           -- e.g. 'SKM-001-P0', 'SKM-001-P1'
-    donor_label        text,                          -- donor identifier (fresh or archived; not in participants table)
-    passage            integer not null,              -- 0 = P0, 1 = P1, etc.
-    parent_culture_id  text,                          -- references cell_cultures(culture_id); null for P0
-    date_frozen        date,
-    n_vials            integer,
-    storage_box        text,
+    anchor_id          integer primary key,           -- references anchors(anchor_id)
+    culture_id         text    not null unique,       -- human-readable donor ID, e.g. 'SKM-001'
+    passage            integer,                       -- passage of the working stock
+    date_frozen        date,                          -- date the working stock was frozen
+    n_vials            integer,                       -- vials in freezer stock
+    cell_type          text,                          -- e.g. 'myocyte', 'fibroblast'
+    source             text,                          -- supplier or collaborator if known
     notes              text
 );
+create index cell_cultures_culture on cell_cultures(culture_id);
 
 -- Satellite cell isolation procedure: biopsy → digestion → pre-plating → P0 stock.
 -- One row per isolation; culture_id references the P0 cell_cultures record produced.
