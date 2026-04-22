@@ -101,6 +101,21 @@ create table specimens (
     notes               text
 );
 
+-- cell culture donors (one row per donor)
+-- anchor_id is the universal PK; culture_id is the human-readable ID (e.g. 'SKM-001'),
+-- analogous to mouse_id (BB361) or recruitment_id (P001).
+create table cell_cultures (
+    anchor_id          integer primary key,           -- references anchors(anchor_id)
+    culture_id         text    not null unique,       -- human-readable donor ID, e.g. 'SKM-001'
+    passage            integer,                       -- passage of the working stock
+    date_frozen        date,                          -- date the working stock was frozen
+    n_vials            integer,                       -- vials in freezer stock
+    cell_type          text,                          -- e.g. 'myocyte', 'fibroblast'
+    source             text,                          -- supplier or collaborator if known
+    notes              text
+);
+create index cell_cultures_culture on cell_cultures(culture_id);
+
 ---------------------------------------------------------------------------
 -- SAMPLES  (every physical sample derived from an anchor)
 ---------------------------------------------------------------------------
@@ -454,25 +469,8 @@ create table external_samples (
 create index external_samples_run on external_samples(run_id);
 
 ---------------------------------------------------------------------------
--- SPRAT — cell culture and smiFISH probe validation
+-- CELL CULTURE ASSAYS
 ---------------------------------------------------------------------------
-
--- Organism table for cell culture donors (one row per donor).
--- Follows the same anchor pattern as mice, participants, specimens.
--- anchor_id is the universal PK; culture_id is the human-readable donor ID (e.g. 'SKM-001'),
--- analogous to mouse_id (BB361) or recruitment_id (P001).
--- passage and stock details are attributes of this record (the vial pulled from the freezer).
-create table cell_cultures (
-    anchor_id          integer primary key,           -- references anchors(anchor_id)
-    culture_id         text    not null unique,       -- human-readable donor ID, e.g. 'SKM-001'
-    passage            integer,                       -- passage of the working stock
-    date_frozen        date,                          -- date the working stock was frozen
-    n_vials            integer,                       -- vials in freezer stock
-    cell_type          text,                          -- e.g. 'myocyte', 'fibroblast'
-    source             text,                          -- supplier or collaborator if known
-    notes              text
-);
-create index cell_cultures_culture on cell_cultures(culture_id);
 
 -- Satellite cell isolation procedure: biopsy → digestion → pre-plating → P0 stock.
 -- One row per isolation; culture_id references the P0 cell_cultures record produced.
