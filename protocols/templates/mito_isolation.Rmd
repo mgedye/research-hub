@@ -1,0 +1,252 @@
+---
+title: "Isolation of Mitochondria from Human Skeletal Muscle Tissue"
+subtitle: "<<<PROJECT_NAME>>>"
+date: "<<<DATE>>>"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+n_samples <- <<<N_SAMPLES>>>
+total_volume <- function(vol_per_sample) vol_per_sample * n_samples
+```
+
+| | |
+|---|---|
+| **Experiment ID** | <<<EXPERIMENT_ID>>> |
+| **Date** | <<<DATE>>> |
+| **Samples** | <<<N_SAMPLES>>> |
+
+---
+
+## Consumables
+
+```{r consumables}
+<<<CONSUMABLES_R>>>
+
+kable(consumables_df,
+      caption = "Reagent volumes for <<<N_SAMPLES>>> samples",
+      booktabs = TRUE) %>%
+  kable_styling(latex_options = c("striped", "hold_position"), font_size = 9) %>%
+  column_spec(1, bold = TRUE)
+```
+
+\textcolor{red}{Verify lot numbers against physical tubes before starting. Update input/consumables.csv with any changes.}
+
+---
+
+\newpage
+
+## Protocol
+
+**Keep all samples and solutions on ice throughout. Centrifuge at 4°C unless stated.**
+
+In this protocol, **<<<N_SAMPLES>>>** samples + an additional 3 spares will be processed.
+
+**Samples to process:**
+
+\textcolor{red}{\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_}
+
+### 1. Preparation
+
+#### Day Before
+
+##### 1.1 Label Tubes, Beakers and Other Materials
+
+**1× each of the following (shared across all samples):**
+
+- 1× 50 mL tube — liquid waste
+- 1× 50 mL tube — Protease Inhibition Buffer
+- 1× 50 mL tube — 1× Solution 2
+- 1× 15 mL Falcon tube — Extraction Buffer
+- 1× large beaker — 1× Separation Buffer *(see step 1.2.5 for volume)*
+- 1× large beaker — ddH\textsubscript{2}O
+- 1× 50 mL tube — Solution 3
+- 2× 2 mL Eppendorf tubes — RNase-A and Proteinase-K solutions
+
+**Per sample:**
+
+- 1× 2 mL Eppendorf tube — sample collection
+- 1× 1.7 mL Eppendorf tube — flushing and storage of mitochondria
+- 1× gentleMACS tube (purple lid) — tissue dissociation
+- 2× 15 mL Falcon tubes
+- 1× Pre-Separation Filter 70 µm
+- 1× Pre-Separation Filter 30 µm
+
+##### 1.2 Reagent Preparation (Day Before)
+
+Prepare **`r total_volume(2100) / 1000` mL** of **Solution 3** in a 50 mL tube and store at −20°C.
+*Note: 2.1 mL required per 50–100 mg tissue.*
+
+---
+
+#### Morning of (~1 hour before dissection)
+
+*Note: Two buckets of ice required — one to cool reagents, one to bring to the processing room.*
+
+**1.2.1** Thaw **`r total_volume(2100) / 1000` mL** of **Solution 3** and keep on ice.
+
+**1.2.2** Prepare **`r total_volume(2500) / 1000` mL** of **1× Solution 2**: add **`r total_volume(250) / 1000` mL** of 10× Solution 2 to **`r total_volume(2250) / 1000` mL** ddH\textsubscript{2}O. Keep on ice.
+*Note: up to 2.5 mL required per sample (2 mL for Protease Inhibition Buffer, 0.5 mL for Extraction Buffer).*
+
+**1.2.3** Prepare **`r total_volume(2000) / 1000` mL** of **Protease Inhibition Buffer**: add **`r total_volume(10)` µL** Protease Inhibitor Cocktail to **`r total_volume(2000) / 1000` mL** freshly prepared 1× Solution 2.
+*Note: once made, usable for ~30 minutes only. For large batches, prepare in multiple rounds.*
+
+**1.2.4** Prepare **`r total_volume(500) / 1000` mL** of **Extraction Buffer**: add **`r total_volume(18)` µL** of Solution 1 to **`r total_volume(500) / 1000` mL** 1× Solution 2. Keep on ice.
+*Note: 0.5 mL required per 50–100 mg tissue.*
+
+**1.2.5** Prepare **`r total_volume(23000) / 1000` mL** of **1× Separation Buffer**: warm 10× Separation Buffer at 37°C until crystals are dissolved. Add **`r total_volume(2300) / 1000` mL** 10× Separation Buffer to **`r total_volume(20700) / 1000` mL** ddH\textsubscript{2}O. Pre-cool on ice.
+
+**1.2.6** Add **0.5 mL** ice-cold Extraction Buffer to each of **`r n_samples`** × 2 mL Eppendorf tubes. Keep on ice.
+
+**1.2.7** Place **`r n_samples`** × gentleMACS tube(s) on ice to pre-cool.
+
+#### RNase-A and Proteinase-K Preparation
+
+*These solutions are sufficient for ALL samples — do not prepare one per sample. Can be prepared during the 1-hour incubation at step 3.3.*
+
+**1.2.8** Prepare **RNase-A solution (1.1 mg/mL)**: add 11 µL RNase-A (100 mg/mL) to 989 µL ice-cold Storage Buffer. Keep on ice.
+
+**1.2.9** Prepare **Proteinase-K solution (0.24 µg/µL)**: add 12 µL of 20 µg/µL stock to 988 µL Storage Buffer. Keep on ice.
+
+---
+
+\newpage
+
+### 2. Homogenisation
+
+Take ice bucket with **`r n_samples`** × 2 mL Eppendorf tube(s) (each containing 0.5 mL Extraction Buffer) to the processing lab biopsy room.
+
+#### 2.1 Dissect and Collect Samples
+
+**2.1.1** Obtain fresh skeletal muscle tissue (~100 mg per sample). Record weights:
+
+\textcolor{red}{\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_}
+
+**Tissue weights (mg):**
+
+\textcolor{red}{\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_}
+
+**2.1.2** Add tissue to each 2 mL tube containing 0.5 mL ice-cold Extraction Buffer. Mince with dissection scissors into ~1–2 mm pieces. Incubate on ice for **30 minutes**.
+
+#### 2.2 Tissue Homogenisation
+
+Bring ice bucket back to PC2 lab to complete homogenisation.
+
+**2.2.1** Centrifuge **`r n_samples`** × 2 mL tubes at **300×g for 5 min** at 4°C. Discard supernatant.
+
+**2.2.2** Add **1 mL** Protease Inhibition Buffer to each tube. Gently flick to resuspend pellet.
+
+**2.2.3** Pour suspension into pre-cooled gentleMACS tube(s).
+
+**2.2.4** Rinse each Eppendorf tube with an additional **1 mL** ice-cold Protease Inhibition Buffer and add to the same gentleMACS tube(s).
+
+**2.2.5** Tightly close gentleMACS tube(s) and attach upside-down onto the gentleMACS Dissociator sleeve.
+
+**2.2.6** Run program: `h_mito_tissue_01`.
+
+**2.2.7** Detach tube(s) and centrifuge at **200×g for 90 seconds** at 4°C to collect homogenate at tube bottom.
+
+**2.2.8** Place **`r n_samples`** × 15 mL Falcon tube(s) on ice. Place a Pre-Separation Filter (70 µm) on top of each. Transfer homogenate into filter reservoir and allow to run through.
+
+**2.2.9** Wash each filter with **2 × 1 mL** ice-cold Solution 3. Centrifuge filtered homogenate at **500×g for 5 min** at 4°C. Transfer supernatant (containing mitochondria) to new **`r n_samples`** × 15 mL Falcon tube(s).
+
+---
+
+\newpage
+
+### 3. Mitochondrial Isolation
+
+**3.1** Add 1× Separation Buffer to each Falcon tube (from step 2.2.9) to bring total volume to **10 mL**.
+
+**3.2** Add **50 µL** human Anti-TOM22 MicroBeads to each Falcon tube to magnetically label mitochondria.
+
+**3.3** Mix well. Incubate for **1 hour** in fridge at 2–8°C under continuous rotation (~12 rpm) using MACSmix Tube Rotator.
+*Note: prepare columns (steps 3.4–3.5) and RNase-A/Proteinase-K solutions (steps 1.2.8–1.2.9) during this incubation if not done earlier.*
+
+**3.4** Place **`r n_samples`** × LS Column(s) in the magnetic field of a MACS separator. Place a Pre-Separation Filter (30 µm) on top of each LS column.
+
+**3.5** Equilibrate each LS column by rinsing with **3 mL** 1× Separation Buffer.
+
+**3.6** Apply magnetically labelled mitochondria to the LS column. Allow to run through.
+*Note: apply in 3 × 3.3 mL aliquots; add each only when the reservoir is empty.*
+
+**3.7** Wash LS column with **3 × 3 mL** 1× Separation Buffer.
+*Note: add each wash only when the column reservoir is empty.*
+
+**3.8** Remove LS column from separator and place on a 1.7 mL Eppendorf tube.
+
+**3.9** Pipette **1.4 mL** 1× Separation Buffer onto the LS column. Immediately flush out enriched mitochondria by firmly pushing the plunger into the column.
+
+---
+
+### 4. RNase and Proteinase-K Treatment
+
+**4.1** Centrifuge at **13,000×g for 2 min**. Discard supernatant.
+
+**4.2** Wash pellet **twice** with 1 mL Storage Buffer, centrifuging each time.
+
+**4.3** Resuspend pellet in **100 µL** Storage Buffer.
+
+**4.4** Gently disrupt pellet with a wide-bore pipette tip and plastic pestle (avoid twisting) until homogeneous.
+
+**RNase-A Treatment** [final concentration: 100 µg/mL]
+
+Add **10 µL** of the 1.1 mg/mL RNase-A solution to the 100 µL mitochondrial suspension. Incubate on ice for **30 min**, flicking every 10 min.
+
+**Proteinase-K Treatment** [final concentration: 20 µg/mL]
+
+After 30 min RNase-A treatment, add **10 µL** of 0.24 µg/µL Proteinase-K. Incubate on ice for **30 min**, flicking every 10 min.
+
+**Final Wash**
+
+Centrifuge at **13,000×g for 2 min**. Discard supernatant. Wash pellet **twice** in 1 mL Storage Buffer.
+
+---
+
+### 5. Storage in TRIzol
+
+**5.1** Add **400 µL** TRI Reagent Solution to each tube.
+
+**5.2** Disrupt pellet with repeated pipetting.
+
+**5.3** Store at **−80°C** for RNA extraction.
+
+**Store in:** \textcolor{red}{\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_}
+
+---
+
+\newpage
+
+## Results
+
+Complete \texttt{results/results.csv} after the isolation.
+
+```{r results-table}
+<<<RESULTS_R>>>
+
+kable(results_df,
+      caption = "Mitochondrial Isolation Results",
+      booktabs = TRUE) %>%
+  kable_styling(latex_options = c("striped", "hold_position"), font_size = 8) %>%
+  column_spec(1, width = "5cm")
+```
+
+---
+
+## Deviations / Notes
+
+\textcolor{red}{Record any deviations from protocol, yield issues, sample-specific observations, or lot number changes here.}
+
+\vspace{3cm}
+
+---
+
+*Generated by generate\_experiment.py — experiment\_id <<<EXPERIMENT_ID>>>*
