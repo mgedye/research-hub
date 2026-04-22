@@ -69,7 +69,7 @@ PROJECT_NAMES = {
 }
 
 TEMPLATES_DIR = Path("scripts") / "protocols" / "templates"
-PROCEDURES_FILE = Path("scripts") / "procedures.json"
+PROCEDURES_FILE = Path("scripts") / "procedure_meta.json"
 
 _procedures = json.loads(PROCEDURES_FILE.read_text())
 
