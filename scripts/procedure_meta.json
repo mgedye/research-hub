@@ -1,4 +1,8 @@
 {
+  "muscle_partitioning": {
+    "tissue_suffix": null,
+    "results_columns": ["mouse_id", "parent_sample_id", "sample_id", "sample_type", "weight_mg", "notes"]
+  },
   "mito_isolation": {
     "tissue_suffix": "mito-isolate",
     "results_columns": ["sample_id", "excluded", "exclusion_reason", "notes"]
