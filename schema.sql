@@ -336,6 +336,18 @@ create table matrx_biopsy_aliquots (
 );
 create index matrx_biopsy_aliquots_biopsy on matrx_biopsy_aliquots(biopsy_id);
 
+create table muscle_partitions (
+    partition_id      integer primary key,
+    experiment_id     integer,           -- references experiments(experiment_id)
+    anchor_id         integer not null,  -- references anchors(anchor_id)
+    parent_sample_id  text,              -- references samples(sample_id) — the whole_muscle input
+    sample_id         text    not null,  -- references samples(sample_id) — the fraction created
+    weight_mg         real,
+    notes             text
+);
+create index muscle_partitions_anchor on muscle_partitions(anchor_id);
+create index muscle_partitions_sample on muscle_partitions(sample_id);
+
 ---------------------------------------------------------------------------
 -- CONSUMABLES
 ---------------------------------------------------------------------------
