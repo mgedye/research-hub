@@ -68,7 +68,7 @@ PROJECT_NAMES = {
     6: "SPRAT",
 }
 
-TEMPLATES_DIR = Path("scripts") / "protocols" / "templates"
+TEMPLATES_DIR = Path("protocols") / "templates"
 PROCEDURES_FILE = Path("scripts") / "procedure_meta.json"
 
 _procedures = json.loads(PROCEDURES_FILE.read_text())
@@ -373,7 +373,7 @@ projects:
         print(f"Storage CSV:     {storage_csv}")
 
     # Rmd from template
-    template_path = Path("scripts") / "protocols" / "templates" / f"{args.procedure}.Rmd"
+    template_path = Path("protocols") / "templates" / f"{args.procedure}.Rmd"
     if template_path.exists():
         r_consumables = consumables_to_r(consumables, args.samples)
         r_results     = results_table_to_r(headers, sample_ids, args.samples)
@@ -385,6 +385,7 @@ projects:
             "CONSUMABLES_R":   r_consumables,
             "CONSUMABLES_CSV": str(exp_dir / "input" / "consumables.csv"),
             "RESULTS_R":       r_results,
+            "RESULTS_CSV":     str(exp_dir / "results" / "results.csv"),
             "PROCEDURE_TYPE":  args.procedure,
         }
         if plugin:
