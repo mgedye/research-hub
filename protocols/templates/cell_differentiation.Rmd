@@ -175,7 +175,7 @@ Record confluency every 1–2 days:
 Complete \texttt{results/results.csv} after harvesting.
 
 ```{r results-table}
-<<<RESULTS_R>>>
+results_df <- read.csv("<<<RESULTS_CSV>>>", stringsAsFactors = FALSE, check.names = FALSE)
 
 t_df <- as.data.frame(t(results_df[, -1]))
 colnames(t_df) <- results_df[[1]]
