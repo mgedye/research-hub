@@ -27,6 +27,7 @@ PROJECT_DIRS = {
     3: "diabetic-small-genes",
     4: "MitoPilot",
     5: "COMIT",
+    6: "SPRAT",
 }
 
 # Map procedure_type → (assay table, id column)
@@ -49,6 +50,9 @@ PROCEDURE_TABLE = {
     "rna-qc-nanodrop":              ("rna_qc",         "rna_qc_id"),
     "rna-qc-qubit":                 ("rna_qc",         "rna_qc_id"),
     "rna_qc_tapestation":           ("rna_qc",         "rna_qc_id"),
+    "satellite_cell_isolation":     ("satellite_cell_isolations", "isolation_id"),
+    "cell_differentiation":         ("cell_differentiation_runs", "diff_run_id"),
+    "smiFISH_assay":                ("smiFISH_assays",  "smiFISH_id"),
 }
 
 # Directories that are not assay runs — skip silently
